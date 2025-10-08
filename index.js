@@ -193,8 +193,6 @@ async function run() {
     app.delete("/teams/:id", authenticate, async (req, res) => {
       try {
         const { id } = req.params;
-
-        // Check if team is used in any tournament
         const usedInTournament = await tournamentsCollection.findOne({
           "teams._id": new ObjectId(id),
         });
