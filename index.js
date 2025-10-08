@@ -330,6 +330,7 @@ async function run() {
     });
 
     // Update Match Result
+    // Update Match Result
     app.put("/tournaments/:id/matches/:matchId", async (req, res) => {
       try {
         const { id, matchId } = req.params;
@@ -351,9 +352,9 @@ async function run() {
           return res.status(403).json({ message: "Invalid admin code" });
         }
 
-        // Update the specific match
+        // Update the specific match - using _id instead of id
         const updatedMatches = tournament.matches.map((match) => {
-          if (match.id === matchId) {
+          if (match._id === matchId) {
             return {
               ...match,
               winner,
