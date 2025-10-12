@@ -75,6 +75,27 @@ const authenticate = (req, res, next) => {
   next();
 };
 
+// Helper function to detect tournament winner and runner-up
+const detectTournamentWinnerAndRunnerUp = (tournament) => {
+  const finalMatch = tournament.matches.find((m) => m.stage === "Final");
+
+  if (!finalMatch || !finalMatch.winner) {
+    return { winner: null, runnerUp: null };
+  }
+
+  const winner =
+    finalMatch.winner === finalMatch.team1?._id
+      ? finalMatch.team1
+      : finalMatch.team2;
+
+  const runnerUp =
+    finalMatch.winner === finalMatch.team1?._id
+      ? finalMatch.team2
+      : finalMatch.team1;
+
+  return { winner, runnerUp };
+};
+
 // ========== Main Server Function ==========
 async function run() {
   try {
@@ -328,6 +349,41 @@ async function run() {
     });
 
     // Update Knockout Teams (after group/league stage completion)
+    // app.put("/tournaments/:id/knockout-teams", async (req, res) => {
+    //   try {
+    //     const { id } = req.params;
+    //     const { adminCode, matches } = req.body;
+
+    //     if (!adminCode) {
+    //       return res.status(400).json({ message: "Admin code required" });
+    //     }
+
+    //     const tournament = await tournamentsCollection.findOne({
+    //       _id: new ObjectId(id),
+    //     });
+
+    //     if (!tournament) {
+    //       return res.status(404).json({ message: "Tournament not found" });
+    //     }
+
+    //     if (tournament.adminCode !== adminCode) {
+    //       return res.status(403).json({ message: "Invalid admin code" });
+    //     }
+
+    //     await tournamentsCollection.updateOne(
+    //       { _id: new ObjectId(id) },
+    //       { $set: { matches } }
+    //     );
+
+    //     res.json({ message: "Knockout teams updated successfully" });
+    //   } catch (error) {
+    //     console.error("Knockout update error:", error);
+    //     res.status(500).json({ message: "Failed to update knockout teams" });
+    //   }
+    // });
+
+    // replace with down code----->
+    // Update Knockout Teams (after group/league stage completion)
     app.put("/tournaments/:id/knockout-teams", async (req, res) => {
       try {
         const { id } = req.params;
@@ -349,18 +405,85 @@ async function run() {
           return res.status(403).json({ message: "Invalid admin code" });
         }
 
+        // Detect winner and runner-up
+        const { winner: tournamentWinner, runnerUp: tournamentRunnerUp } =
+          detectTournamentWinnerAndRunnerUp({
+            ...tournament,
+            matches,
+          });
+
         await tournamentsCollection.updateOne(
           { _id: new ObjectId(id) },
-          { $set: { matches } }
+          {
+            $set: {
+              matches,
+              winner: tournamentWinner,
+              runnerUp: tournamentRunnerUp,
+              status: tournamentWinner ? "completed" : tournament.status,
+            },
+          }
         );
 
-        res.json({ message: "Knockout teams updated successfully" });
+        res.json({
+          message: "Knockout teams updated successfully",
+          winner: tournamentWinner,
+          runnerUp: tournamentRunnerUp,
+        });
       } catch (error) {
         console.error("Knockout update error:", error);
         res.status(500).json({ message: "Failed to update knockout teams" });
       }
     });
+
     // Update Match Result
+    // Update Match Result
+    // app.put("/tournaments/:id/matches/:matchId", async (req, res) => {
+    //   try {
+    //     const { id, matchId } = req.params;
+    //     const { adminCode, winner, team1Score, team2Score } = req.body;
+
+    //     if (!adminCode) {
+    //       return res.status(400).json({ message: "Admin code required" });
+    //     }
+
+    //     const tournament = await tournamentsCollection.findOne({
+    //       _id: new ObjectId(id),
+    //     });
+
+    //     if (!tournament) {
+    //       return res.status(404).json({ message: "Tournament not found" });
+    //     }
+
+    //     if (tournament.adminCode !== adminCode) {
+    //       return res.status(403).json({ message: "Invalid admin code" });
+    //     }
+
+    //     // Update the specific match - using _id instead of id
+    //     const updatedMatches = tournament.matches.map((match) => {
+    //       if (match._id === matchId) {
+    //         return {
+    //           ...match,
+    //           winner,
+    //           team1Score: team1Score || match.team1Score,
+    //           team2Score: team2Score || match.team2Score,
+    //         };
+    //       }
+    //       return match;
+    //     });
+
+    //     await tournamentsCollection.updateOne(
+    //       { _id: new ObjectId(id) },
+    //       { $set: { matches: updatedMatches } }
+    //     );
+
+    //     res.json({ message: "Match result updated successfully" });
+    //   } catch (error) {
+    //     console.error("Match update error:", error);
+    //     res.status(500).json({ message: "Failed to update match result" });
+    //   }
+    // });
+
+    // replaced with down code ------>
     // Update Match Result
     app.put("/tournaments/:id/matches/:matchId", async (req, res) => {
       try {
@@ -383,7 +506,7 @@ async function run() {
           return res.status(403).json({ message: "Invalid admin code" });
         }
 
-        // Update the specific match - using _id instead of id
+        // Update the specific match
         const updatedMatches = tournament.matches.map((match) => {
           if (match._id === matchId) {
             return {
@@ -396,18 +519,36 @@ async function run() {
           return match;
         });
 
+        // Detect winner and runner-up
+        const { winner: tournamentWinner, runnerUp: tournamentRunnerUp } =
+          detectTournamentWinnerAndRunnerUp({
+            ...tournament,
+            matches: updatedMatches,
+          });
+
+        // Update tournament with new match results and winner/runner-up
         await tournamentsCollection.updateOne(
           { _id: new ObjectId(id) },
-          { $set: { matches: updatedMatches } }
+          {
+            $set: {
+              matches: updatedMatches,
+              winner: tournamentWinner,
+              runnerUp: tournamentRunnerUp,
+              status: tournamentWinner ? "completed" : tournament.status,
+            },
+          }
         );
 
-        res.json({ message: "Match result updated successfully" });
+        res.json({
+          message: "Match result updated successfully",
+          winner: tournamentWinner,
+          runnerUp: tournamentRunnerUp,
+        });
       } catch (error) {
         console.error("Match update error:", error);
         res.status(500).json({ message: "Failed to update match result" });
       }
     });
-
     // Delete Tournament
     app.delete("/tournaments/:id", async (req, res) => {
       try {
