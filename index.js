@@ -383,55 +383,7 @@ async function run() {
       }
     });
 
-    // Update Match Result
-    // Update Match Result
-    // app.put("/tournaments/:id/matches/:matchId", async (req, res) => {
-    //   try {
-    //     const { id, matchId } = req.params;
-    //     const { adminCode, winner, team1Score, team2Score } = req.body;
-
-    //     if (!adminCode) {
-    //       return res.status(400).json({ message: "Admin code required" });
-    //     }
-
-    //     const tournament = await tournamentsCollection.findOne({
-    //       _id: new ObjectId(id),
-    //     });
-
-    //     if (!tournament) {
-    //       return res.status(404).json({ message: "Tournament not found" });
-    //     }
-
-    //     if (tournament.adminCode !== adminCode) {
-    //       return res.status(403).json({ message: "Invalid admin code" });
-    //     }
-
-    //     // Update the specific match - using _id instead of id
-    //     const updatedMatches = tournament.matches.map((match) => {
-    //       if (match._id === matchId) {
-    //         return {
-    //           ...match,
-    //           winner,
-    //           team1Score: team1Score || match.team1Score,
-    //           team2Score: team2Score || match.team2Score,
-    //         };
-    //       }
-    //       return match;
-    //     });
-
-    //     await tournamentsCollection.updateOne(
-    //       { _id: new ObjectId(id) },
-    //       { $set: { matches: updatedMatches } }
-    //     );
-
-    //     res.json({ message: "Match result updated successfully" });
-    //   } catch (error) {
-    //     console.error("Match update error:", error);
-    //     res.status(500).json({ message: "Failed to update match result" });
-    //   }
-    // });
-
-    // replaced with down code ------>
+    
     // Update Match Result
     app.put("/tournaments/:id/matches/:matchId", async (req, res) => {
       try {
