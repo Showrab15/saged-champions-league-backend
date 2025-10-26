@@ -85,7 +85,8 @@ async function run() {
     const teamsCollection = db.collection("teams");
     const tournamentsCollection = db.collection("tournaments");
     const usersCollection = db.collection("users");
-const playersCollection = db.collection("players");
+    const playersCollection = db.collection("players");
+
     // ========== User Routes ==========
 
     // Create or Update User Profile (called after Firebase auth)
@@ -554,24 +555,27 @@ const playersCollection = db.collection("players");
 
 
 
-
-
-
-
-// Add to your server file (index.js)
-
 // ========== Player Routes ==========
 
-// Get All Players
+// Get All Players (with filters)
 app.get("/players", async (req, res) => {
   try {
-    const { teamId, role, search } = req.query;
+    const { search, teamId, role } = req.query;
     let query = {};
 
-    if (teamId) query.teamId = teamId;
-    if (role) query.role = role;
     if (search) {
-      query.name = { $regex: search, $options: "i" };
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { teamName: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    if (teamId && teamId !== "all") {
+      query.teamId = teamId;
+    }
+
+    if (role && role !== "all") {
+      query.role = role;
     }
 
     const players = await playersCollection
@@ -581,26 +585,8 @@ app.get("/players", async (req, res) => {
 
     res.json(players);
   } catch (error) {
-    console.error(error);
+    console.error("Failed to fetch players:", error);
     res.status(500).json({ message: "Failed to fetch players" });
-  }
-});
-
-// Get Single Player
-app.get("/players/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const player = await playersCollection.findOne({
-      _id: new ObjectId(id),
-    });
-
-    if (!player) {
-      return res.status(404).json({ message: "Player not found" });
-    }
-
-    res.json(player);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch player" });
   }
 });
 
@@ -609,12 +595,13 @@ app.post("/players", authenticate, async (req, res) => {
   try {
     const {
       name,
+      teamName,
       teamId,
       role,
       matchesPlayed,
       wins,
-      lost,
-      tie,
+      losses,
+      ties,
       runsScored,
       battingAverage,
       battingStrikeRate,
@@ -624,21 +611,29 @@ app.post("/players", authenticate, async (req, res) => {
       bowlingAverage,
       bowlingStrikeRate,
       maidens,
-      wickets,
+      wickets
     } = req.body;
 
-    if (!name || !teamId) {
-      return res.status(400).json({ message: "Name and team required" });
+    if (!name || !teamName || !teamId) {
+      return res.status(400).json({ 
+        message: "Player name, team name, and team ID are required" 
+      });
     }
+
+    const winPercentage = matchesPlayed > 0 
+      ? ((wins / matchesPlayed) * 100).toFixed(1) 
+      : "0.0";
 
     const newPlayer = {
       name,
+      teamName,
       teamId,
-      role: role || "All-rounder",
+      role: role || "All-Rounder",
       matchesPlayed: matchesPlayed || 0,
       wins: wins || 0,
-      lost: lost || 0,
-      tie: tie || 0,
+      losses: losses || 0,
+      ties: ties || 0,
+      winPercentage,
       runsScored: runsScored || 0,
       battingAverage: battingAverage || 0,
       battingStrikeRate: battingStrikeRate || 0,
@@ -651,13 +646,16 @@ app.post("/players", authenticate, async (req, res) => {
       wickets: wickets || 0,
       createdBy: req.userId,
       createdAt: new Date(),
+      updatedAt: new Date()
     };
 
+    const playersCollection = db.collection("players");
     const result = await playersCollection.insertOne(newPlayer);
+
     res.status(201).json({
       message: "Player created successfully",
       playerId: result.insertedId,
-      player: { ...newPlayer, _id: result.insertedId },
+      player: { ...newPlayer, _id: result.insertedId }
     });
   } catch (error) {
     console.error("Player creation error:", error);
@@ -669,27 +667,72 @@ app.post("/players", authenticate, async (req, res) => {
 app.put("/players/:id", authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = { ...req.body };
-    delete updateData._id;
+    const {
+      name,
+      teamName,
+      teamId,
+      role,
+      matchesPlayed,
+      wins,
+      losses,
+      ties,
+      runsScored,
+      battingAverage,
+      battingStrikeRate,
+      fours,
+      sixes,
+      ducks,
+      bowlingAverage,
+      bowlingStrikeRate,
+      maidens,
+      wickets
+    } = req.body;
 
-    const result = await playersCollection.updateOne(
-      { _id: new ObjectId(id), createdBy: req.userId },
-      { $set: { ...updateData, updatedAt: new Date() } }
-    );
+    const playersCollection = db.collection("players");
+    
+    const existingPlayer = await playersCollection.findOne({
+      _id: new ObjectId(id)
+    });
 
-    if (result.matchedCount === 0) {
-      return res
-        .status(404)
-        .json({ message: "Player not found or not authorized" });
+    if (!existingPlayer) {
+      return res.status(404).json({ message: "Player not found" });
     }
 
-    const updatedPlayer = await playersCollection.findOne({
-      _id: new ObjectId(id),
-    });
+    const winPercentage = matchesPlayed > 0 
+      ? ((wins / matchesPlayed) * 100).toFixed(1) 
+      : "0.0";
+
+    const updatedPlayer = {
+      name,
+      teamName,
+      teamId,
+      role,
+      matchesPlayed,
+      wins,
+      losses,
+      ties,
+      winPercentage,
+      runsScored,
+      battingAverage,
+      battingStrikeRate,
+      fours,
+      sixes,
+      ducks,
+      bowlingAverage,
+      bowlingStrikeRate,
+      maidens,
+      wickets,
+      updatedAt: new Date()
+    };
+
+    await playersCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updatedPlayer }
+    );
 
     res.json({
       message: "Player updated successfully",
-      player: updatedPlayer,
+      player: { ...updatedPlayer, _id: new ObjectId(id) }
     });
   } catch (error) {
     console.error("Player update error:", error);
@@ -701,16 +744,16 @@ app.put("/players/:id", authenticate, async (req, res) => {
 app.delete("/players/:id", authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-
+    const playersCollection = db.collection("players");
+    
     const result = await playersCollection.deleteOne({
-      _id: new ObjectId(id),
-      createdBy: req.userId,
+      _id: new ObjectId(id)
     });
 
     if (result.deletedCount === 0) {
-      return res
-        .status(404)
-        .json({ message: "Player not found or not authorized" });
+      return res.status(404).json({ 
+        message: "Player not found or not authorized" 
+      });
     }
 
     res.json({ message: "Player deleted successfully" });
@@ -720,20 +763,6 @@ app.delete("/players/:id", authenticate, async (req, res) => {
   }
 });
 
-// Get Team Players
-app.get("/teams/:teamId/players", async (req, res) => {
-  try {
-    const { teamId } = req.params;
-    const players = await playersCollection
-      .find({ teamId })
-      .sort({ runsScored: -1 })
-      .toArray();
-
-    res.json(players);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch team players" });
-  }
-});
 
 
 
@@ -743,6 +772,8 @@ app.get("/teams/:teamId/players", async (req, res) => {
 
 
 
+    
+    
 
     // MongoDB ping check
     await client.db("admin").command({ ping: 1 });
