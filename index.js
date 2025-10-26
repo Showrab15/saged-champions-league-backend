@@ -564,9 +564,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: "Something went wrong!" });
 });
 
-// ========== Serverless Export (Uncomment for Vercel/Netlify) ==========
-// module.exports = app;
-// module.exports.handler = require('serverless-http')(app);
+
 
 // ========== Local Server ==========
 if (process.env.NODE_ENV !== "production") {
