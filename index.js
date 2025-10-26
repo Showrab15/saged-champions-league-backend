@@ -330,41 +330,7 @@ async function run() {
       }
     });
 
-    // Update Knockout Teams (after group/league stage completion)
-    // app.put("/tournaments/:id/knockout-teams", async (req, res) => {
-    //   try {
-    //     const { id } = req.params;
-    //     const { adminCode, matches } = req.body;
-
-    //     if (!adminCode) {
-    //       return res.status(400).json({ message: "Admin code required" });
-    //     }
-
-    //     const tournament = await tournamentsCollection.findOne({
-    //       _id: new ObjectId(id),
-    //     });
-
-    //     if (!tournament) {
-    //       return res.status(404).json({ message: "Tournament not found" });
-    //     }
-
-    //     if (tournament.adminCode !== adminCode) {
-    //       return res.status(403).json({ message: "Invalid admin code" });
-    //     }
-
-    //     await tournamentsCollection.updateOne(
-    //       { _id: new ObjectId(id) },
-    //       { $set: { matches } }
-    //     );
-
-    //     res.json({ message: "Knockout teams updated successfully" });
-    //   } catch (error) {
-    //     console.error("Knockout update error:", error);
-    //     res.status(500).json({ message: "Failed to update knockout teams" });
-    //   }
-    // });
-
-    // replace with down code----->
+   
     // Update Knockout Teams (after group/league stage completion)
     app.put("/tournaments/:id/knockout-teams", async (req, res) => {
       try {
