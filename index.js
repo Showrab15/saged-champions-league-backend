@@ -85,7 +85,7 @@ async function run() {
     const teamsCollection = db.collection("teams");
     const tournamentsCollection = db.collection("tournaments");
     const usersCollection = db.collection("users");
-
+const playersCollection = db.collection("players");
     // ========== User Routes ==========
 
     // Create or Update User Profile (called after Firebase auth)
@@ -533,6 +533,216 @@ async function run() {
         res.status(500).json({ message: "Failed to verify admin code" });
       }
     });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Add to your server file (index.js)
+
+// ========== Player Routes ==========
+
+// Get All Players
+app.get("/players", async (req, res) => {
+  try {
+    const { teamId, role, search } = req.query;
+    let query = {};
+
+    if (teamId) query.teamId = teamId;
+    if (role) query.role = role;
+    if (search) {
+      query.name = { $regex: search, $options: "i" };
+    }
+
+    const players = await playersCollection
+      .find(query)
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json(players);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to fetch players" });
+  }
+});
+
+// Get Single Player
+app.get("/players/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const player = await playersCollection.findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!player) {
+      return res.status(404).json({ message: "Player not found" });
+    }
+
+    res.json(player);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch player" });
+  }
+});
+
+// Create Player (Admin only)
+app.post("/players", authenticate, async (req, res) => {
+  try {
+    const {
+      name,
+      teamId,
+      role,
+      matchesPlayed,
+      wins,
+      lost,
+      tie,
+      runsScored,
+      battingAverage,
+      battingStrikeRate,
+      fours,
+      sixes,
+      ducks,
+      bowlingAverage,
+      bowlingStrikeRate,
+      maidens,
+      wickets,
+    } = req.body;
+
+    if (!name || !teamId) {
+      return res.status(400).json({ message: "Name and team required" });
+    }
+
+    const newPlayer = {
+      name,
+      teamId,
+      role: role || "All-rounder",
+      matchesPlayed: matchesPlayed || 0,
+      wins: wins || 0,
+      lost: lost || 0,
+      tie: tie || 0,
+      runsScored: runsScored || 0,
+      battingAverage: battingAverage || 0,
+      battingStrikeRate: battingStrikeRate || 0,
+      fours: fours || 0,
+      sixes: sixes || 0,
+      ducks: ducks || 0,
+      bowlingAverage: bowlingAverage || 0,
+      bowlingStrikeRate: bowlingStrikeRate || 0,
+      maidens: maidens || 0,
+      wickets: wickets || 0,
+      createdBy: req.userId,
+      createdAt: new Date(),
+    };
+
+    const result = await playersCollection.insertOne(newPlayer);
+    res.status(201).json({
+      message: "Player created successfully",
+      playerId: result.insertedId,
+      player: { ...newPlayer, _id: result.insertedId },
+    });
+  } catch (error) {
+    console.error("Player creation error:", error);
+    res.status(500).json({ message: "Failed to create player" });
+  }
+});
+
+// Update Player (Admin only)
+app.put("/players/:id", authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = { ...req.body };
+    delete updateData._id;
+
+    const result = await playersCollection.updateOne(
+      { _id: new ObjectId(id), createdBy: req.userId },
+      { $set: { ...updateData, updatedAt: new Date() } }
+    );
+
+    if (result.matchedCount === 0) {
+      return res
+        .status(404)
+        .json({ message: "Player not found or not authorized" });
+    }
+
+    const updatedPlayer = await playersCollection.findOne({
+      _id: new ObjectId(id),
+    });
+
+    res.json({
+      message: "Player updated successfully",
+      player: updatedPlayer,
+    });
+  } catch (error) {
+    console.error("Player update error:", error);
+    res.status(500).json({ message: "Failed to update player" });
+  }
+});
+
+// Delete Player (Admin only)
+app.delete("/players/:id", authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await playersCollection.deleteOne({
+      _id: new ObjectId(id),
+      createdBy: req.userId,
+    });
+
+    if (result.deletedCount === 0) {
+      return res
+        .status(404)
+        .json({ message: "Player not found or not authorized" });
+    }
+
+    res.json({ message: "Player deleted successfully" });
+  } catch (error) {
+    console.error("Player deletion error:", error);
+    res.status(500).json({ message: "Failed to delete player" });
+  }
+});
+
+// Get Team Players
+app.get("/teams/:teamId/players", async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const players = await playersCollection
+      .find({ teamId })
+      .sort({ runsScored: -1 })
+      .toArray();
+
+    res.json(players);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch team players" });
+  }
+});
+
+
+
+
+
+
+
+
+
 
     // MongoDB ping check
     await client.db("admin").command({ ping: 1 });
