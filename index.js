@@ -45,25 +45,7 @@ const client = new MongoClient(uri, {
   },
 });
 
-// ========== Firebase Admin Middleware (Optional - for token verification) ==========
-// If you want to verify Firebase tokens on the backend:
-// const admin = require('firebase-admin');
-// admin.initializeApp({
-//   credential: admin.credential.cert(require('./serviceAccountKey.json'))
-// });
 
-// const verifyFirebaseToken = async (req, res, next) => {
-//   const token = req.headers.authorization?.split('Bearer ')[1];
-//   if (!token) return res.status(401).json({ message: "No token provided" });
-//
-//   try {
-//     const decodedToken = await admin.auth().verifyIdToken(token);
-//     req.user = { uid: decodedToken.uid, email: decodedToken.email };
-//     next();
-//   } catch (error) {
-//     return res.status(403).json({ message: "Invalid token" });
-//   }
-// };
 
 // ========== Simple Auth Middleware (using userId from request) ==========
 const authenticate = (req, res, next) => {
